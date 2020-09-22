@@ -3,12 +3,17 @@ const express = require('express');
 const app = express();
 var request = require('request');
 var zwave = new ZWave({
-    ConsoleOutput: false
+    ConsoleOutput: false,
+    //NetworkKey: "0xBA, 0x2E, 0x22, 0x70, 0xD3, 0xE0, 0xBA, 0x94, 0xAC, 0x03, 0xFD, 0x63, 0xFA, 0x65, 0x24, 0xBA"
 });
 
 var info = undefined;
 
 var nodes = [];
+
+var nodeAlreadyExists = false;
+var znetwork = [];
+var zwave_network = [];
 
 zwave.on('driver ready', function(homeid) {
     console.log('scanning homeid=0x%s...', homeid.toString(16));
@@ -33,6 +38,9 @@ zwave.on('node added', function(nodeid) {
         classes: {},
         ready: false,
     };
+
+    console.log("NEW NODE ADDED, WITH NODE_ID: ", nodeid);
+
 });
 
 function currentDateTime() {
@@ -43,34 +51,36 @@ function currentDateTime() {
     return today;
 }
 
-async function getNodeInfo(info) {
-    console.log("ESTOU NA GET NODE INFO");
+// async function getNodeInfo(info) {
+//     console.log("ESTOU NA GET NODE INFO");
 
-    let time = currentDateTime();
+//     let time = currentDateTime();
 
-    let data = {
-        info,
-        time
-    }
+//     let data = {
+//         info,
+//         time
+//     }
 
-    return new Promise(function (resolve, reject) {
+//     return new Promise(function (resolve, reject) {
         
-        console.log("to mandando pro receiver");
-        console.log(info);
-        console.log("Current time: " + currentDateTime());
+//         console.log("to mandando pro receiver");
+//         console.log(info);
+//         console.log("Current time: " + currentDateTime());
         
-        request({
-            url: "http://localhost:5050/receiveNodeInfo",
-            method: "POST",
-            json: true,
-            body: data   // <--Very important!!!
-        }, function (error, response, body) {
-            resolve(response);
-        });
-    }).catch((error) => {
-        console.log(error);
-    });
-}
+//         request({
+//             url: "http://localhost:5050/receiveNodeInfo",
+//             method: "POST",
+//             json: true,
+//             body: data   // <--Very important!!!
+//         }, function (error, response, body) {
+//             resolve(response);
+//         });
+//     }).catch((error) => {
+//         console.log(error);
+//     });
+// }
+
+
 
 zwave.on('value added', function(nodeid, comclass, valueId) {
     if (!nodes[nodeid]['classes'][comclass])
@@ -88,7 +98,7 @@ zwave.on('value changed', function(nodeid, comclass, value) {
         info = value;
         //console.log(info);
 
-        getNodeInfo(info);
+        //getNodeInfo(info);
 
     }
     nodes[nodeid]['classes'][comclass][value.index] = value;
@@ -101,6 +111,7 @@ zwave.on('value removed', function(nodeid, comclass, index) {
 });
 
 zwave.on('node ready', function(nodeid, nodeinfo) {
+
     nodes[nodeid]['manufacturer'] = nodeinfo.manufacturer;
     nodes[nodeid]['manufacturerid'] = nodeinfo.manufacturerid;
     nodes[nodeid]['product'] = nodeinfo.product;
@@ -117,9 +128,6 @@ zwave.on('node ready', function(nodeid, nodeinfo) {
             nodeinfo.product ? nodeinfo.product
                      : 'product=' + nodeinfo.productid +
                        ', type=' + nodeinfo.producttype);
-    
-    pID = nodeinfo.productid;
-    mID = nodeinfo.manufacturerid;
 
     console.log('node%d: name="%s", type="%s", location="%s"', nodeid,
             nodeinfo.name,
@@ -138,7 +146,93 @@ zwave.on('node ready', function(nodeid, nodeinfo) {
           console.log('node%d:   %s=%s', nodeid, values[idx]['label'], values[idx]['value']);
       }
     }
+
+    let nodeInfo = {
+        node_id: nodeid,
+        manufacturer: nodeinfo.manufacturer,
+        manufacturerid: nodeinfo.manufacturerid,
+        product: nodeinfo.product,
+        producttype: nodeinfo.producttype,
+        productid: nodeinfo.productid,
+        type: nodeinfo.type,
+        name: nodeinfo.name,
+        location: nodeinfo.loc,
+        time: currentDateTime()
+    }
+
+    znetwork.push(nodeInfo);
+
+    // console.log("ZNETWORK: ", znetwork);
+    // console.log("node_id do nodes[i]: ", nodes[1].ready);
+    // console.log("node if da znetwork[i]: ", znetwork[0].node_id);
+
+    for (let i = 0; i < zwave_network.length; i++) {
+
+        if (zwave_network[i]) {
+
+            if (zwave_network[i].node_id == nodeid) {
+                nodeAlreadyExists = true;
+            }
+            
+        }
+        
+    }
+
+    if (nodeAlreadyExists == false) {
+        zwave_network.push(nodeInfo);
+        console.log("+++++++ADICIONEI O NOVO NÓ NA REDE Z-WAVE++++++++");
+    } else {
+        console.log("**********JA EXISTE ESSE NÓ NA REDE Z-WAVE***********");
+    }
+
+    sendNodeInfo(nodeInfo);
+    sendZwaveNetwork(zwave_network);
+    
 });
+
+async function sendNodeInfo(nodeInfo) {
+    console.log("ESTOU NA NODE INFO");
+
+    return new Promise(function (resolve, reject) {
+        
+        console.log("to mandando NODE INFO pro receiver");
+        console.log(nodeInfo);
+        //console.log("Current time: " + currentDateTime());
+        
+        request({
+            url: "http://localhost:5050/receiveNodeInfo",
+            method: "POST",
+            json: true,
+            body: nodeInfo   // <--Very important!!!
+        }, function (error, response, body) {
+            resolve(response);
+        });
+    }).catch((error) => {
+        console.log(error);
+    });
+}
+
+async function sendZwaveNetwork(zwave_network) {
+    console.log("ESTOU NA SEND Z-WAVE NETWORK");
+
+    return new Promise(function (resolve, reject) {
+        
+        console.log("to mandando a Z-WAVE NETWORK pro receiver");
+        console.log(zwave_network);
+        //console.log("Current time: " + currentDateTime());
+        
+        request({
+            url: "http://localhost:5050/receiveZwaveNetwork",
+            method: "POST",
+            json: true,
+            body: zwave_network   // <--Very important!!!
+        }, function (error, response, body) {
+            resolve(response);
+        });
+    }).catch((error) => {
+        console.log(error);
+    });
+}
 
 zwave.on('notification', function(nodeid, notif) {
     switch (notif) {
@@ -178,9 +272,11 @@ zwave.on('scan complete', function() {
     } else {
       // using new security API
       // set this to 'true' for secure devices eg. door locks
-      zwave.addNode(true);
+        zwave.addNode(true);
+       
     }
 });
+
 
 zwave.on('controller command', function(r,s) {
     console.log('controller commmand feedback: r=%d, s=%d',r,s);
