@@ -169,12 +169,12 @@ zwave.on('node ready', function(nodeid, nodeinfo) {
     znetwork.push(nodeInfo);
     
 
-    console.log("ZNETWORK: ", znetwork);
-    console.log(allNodesAdded);
+    // console.log("ZNETWORK: ", znetwork);
+    // console.log(allNodesAdded);
 
     var network = sortZwaveNetwork(znetwork);
 
-    console.log(network);
+    // console.log(network);
 
     zwave_network = removeDuplicates(network);
 
@@ -238,46 +238,46 @@ function removeDuplicates(array) {
         newArray.push(uniqueObject[i]); 
     }
     
-    console.log("~~~~~~~~~~PRINTING NEW ARRAY ALL RIGHT~~~~~~~~~");
-    console.log(newArray);
+    // console.log("~~~~~~~~~~PRINTING NEW ARRAY ALL RIGHT~~~~~~~~~");
+    // console.log(newArray);
 
     return newArray;
 }
 
-async function sendNodeInfo(nodeInfo) {
-    console.log("ESTOU NA NODE INFO");
+// async function sendNodeInfo(nodeInfo) {
+//     console.log("ESTOU NA NODE INFO");
 
-    return new Promise(function (resolve, reject) {
+//     return new Promise(function (resolve, reject) {
         
-        console.log("to mandando NODE INFO pro receiver");
-        console.log(nodeInfo);
-        //console.log("Current time: " + currentDateTime());
+//         console.log("to mandando NODE INFO pro receiver");
+//         console.log(nodeInfo);
+//         //console.log("Current time: " + currentDateTime());
         
-        request({
-            url: "http://localhost:5050/receiveNodeInfo",
-            method: "POST",
-            json: true,
-            body: nodeInfo   // <--Very important!!!
-        }, function (error, response, body) {
-            resolve(response);
-        });
-    }).catch((error) => {
-        console.log(error);
-    });
-}
+//         request({
+//             url: "http://localhost:3000/receiveNodeInfo",
+//             method: "POST",
+//             json: true,
+//             body: nodeInfo   // <--Very important!!!
+//         }, function (error, response, body) {
+//             resolve(response);
+//         });
+//     }).catch((error) => {
+//         console.log(error);
+//     });
+// }
 
 async function sendZwaveNetwork(zwave_network) {
-    console.log("ESTOU NA SEND Z-WAVE NETWORK");
+    //console.log("ESTOU NA SEND Z-WAVE NETWORK");
 
     return new Promise(function (resolve, reject) {
         
-        console.log("to mandando a Z-WAVE NETWORK pro receiver");
-        console.log(zwave_network);
+        // console.log("to mandando a Z-WAVE NETWORK pro receiver");
+        // console.log(zwave_network);
         
         // var network = sortZwaveNetwork(zwave_network);
         
         request({
-            url: "http://localhost:5050/receiveZwaveNetwork",
+            url: "http://localhost:3000/receiveZwaveNetwork",
             method: "POST",
             json: true,
             body: zwave_network   // <--Very important!!!
