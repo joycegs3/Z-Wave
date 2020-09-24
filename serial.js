@@ -11,12 +11,15 @@ var info = undefined;
 
 var nodes = [];
 
-var nodeAlreadyExists = false;
+//var nodeAlreadyExists = false;
+var homeID = undefined;
 var znetwork = [];
 var zwave_network = [];
+var allNodesAdded = [];
 
 zwave.on('driver ready', function(homeid) {
     console.log('scanning homeid=0x%s...', homeid.toString(16));
+    homeID = homeid.toString(16);
 });
 
 zwave.on('driver failed', function() {
@@ -38,6 +41,8 @@ zwave.on('node added', function(nodeid) {
         classes: {},
         ready: false,
     };
+
+    allNodesAdded.push(nodeid);    
 
     console.log("NEW NODE ADDED, WITH NODE_ID: ", nodeid);
 
@@ -157,38 +162,87 @@ zwave.on('node ready', function(nodeid, nodeinfo) {
         type: nodeinfo.type,
         name: nodeinfo.name,
         location: nodeinfo.loc,
-        time: currentDateTime()
+        time: currentDateTime(),
+        zwave_homeID: homeID
     }
 
     znetwork.push(nodeInfo);
+    
 
-    // console.log("ZNETWORK: ", znetwork);
-    // console.log("node_id do nodes[i]: ", nodes[1].ready);
+    console.log("ZNETWORK: ", znetwork);
+    console.log(allNodesAdded);
+
+    var network = sortZwaveNetwork(znetwork);
+
+    console.log(network);
+
+    zwave_network = removeDuplicates(network);
+
+    //console.log("SHOWING NETWORK DUPLICATE REMOVED: ", network);
+
+    //zwave_network = network;
+
+    
+    //console.log(zwave_network);
     // console.log("node if da znetwork[i]: ", znetwork[0].node_id);
 
-    for (let i = 0; i < zwave_network.length; i++) {
+    // for (let i = 0; i < nodes.length; i++) {
 
-        if (zwave_network[i]) {
-
-            if (zwave_network[i].node_id == nodeid) {
-                nodeAlreadyExists = true;
-            }
+    //     for (let j = 0; j < znetwork.length; j++) {
+           
+    //         if (allNodesAdded[i] == znetwork[j].node_id && znetwork.length <= allNodesAdded.length) {
+    //             zwave_network.push(znetwork[j]);
+    //             console.log("+++++++ADICIONEI O NOVO NÓ NA REDE Z-WAVE++++++++");
+    //         }
             
-        }
+    //     }
+
+    //     // if (zwave_network[i]) {
+
+    //     //     if (zwave_network[i].node_id == nodeid) {
+    //     //         nodeAlreadyExists = true;
+    //     //     }
+            
+    //     // }
         
-    }
+    // }
 
-    if (nodeAlreadyExists == false) {
-        zwave_network.push(nodeInfo);
-        console.log("+++++++ADICIONEI O NOVO NÓ NA REDE Z-WAVE++++++++");
-    } else {
-        console.log("**********JA EXISTE ESSE NÓ NA REDE Z-WAVE***********");
-    }
+    // if (nodeAlreadyExists == false) {
+    //     zwave_network.push(nodeInfo);
+    //     console.log("+++++++ADICIONEI O NOVO NÓ NA REDE Z-WAVE++++++++");
+    // } else {
+    //     console.log("**********JA EXISTE ESSE NÓ NA REDE Z-WAVE***********");
+    // }
 
-    sendNodeInfo(nodeInfo);
+    //sendNodeInfo(nodeInfo);
     sendZwaveNetwork(zwave_network);
     
 });
+
+function removeDuplicates(array) {
+    var newArray = [];
+
+    let uniqueObject = {};
+
+    for (let i in array) { 
+      
+        // Extract the node_id 
+        let objNodeId = array[i]['node_id'];
+
+        // Use the node_id as the index 
+        uniqueObject[objNodeId] = array[i];
+    } 
+
+    // Loop to push unique object into array 
+    for (i in uniqueObject) { 
+        newArray.push(uniqueObject[i]); 
+    }
+    
+    console.log("~~~~~~~~~~PRINTING NEW ARRAY ALL RIGHT~~~~~~~~~");
+    console.log(newArray);
+
+    return newArray;
+}
 
 async function sendNodeInfo(nodeInfo) {
     console.log("ESTOU NA NODE INFO");
@@ -219,7 +273,8 @@ async function sendZwaveNetwork(zwave_network) {
         
         console.log("to mandando a Z-WAVE NETWORK pro receiver");
         console.log(zwave_network);
-        //console.log("Current time: " + currentDateTime());
+        
+        // var network = sortZwaveNetwork(zwave_network);
         
         request({
             url: "http://localhost:5050/receiveZwaveNetwork",
@@ -234,6 +289,12 @@ async function sendZwaveNetwork(zwave_network) {
     });
 }
 
+function sortZwaveNetwork(array) {
+    return array.sort(function(a, b) {
+        return a.node_id - b.node_id;
+    })
+}
+ 
 zwave.on('notification', function(nodeid, notif) {
     switch (notif) {
     case 0:
@@ -272,7 +333,7 @@ zwave.on('scan complete', function() {
     } else {
       // using new security API
       // set this to 'true' for secure devices eg. door locks
-        zwave.addNode(true);
+        zwave.addNode(false);
        
     }
 });
